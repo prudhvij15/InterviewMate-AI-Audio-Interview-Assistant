@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
+// Use CORS
 const corsOptions = {
   origin: "http://localhost:3000",
   methods: ["GET", "POST"],
