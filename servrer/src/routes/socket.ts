@@ -3,7 +3,7 @@ import { Server as HttpServer } from "http";
 import axios from "axios";
 import FormData from "form-data";
 
-const OPENAI_API_KEY = "OPEN AI API KEY";
+const OPENAI_API_KEY = process.env.API_KEY;
 
 const setupSocketIO = (server: HttpServer) => {
   const io = new SocketIOServer(server, {
@@ -21,13 +21,21 @@ const setupSocketIO = (server: HttpServer) => {
       console.log("Received audio data");
 
       try {
+        // Step 1: Transcribe the audio to text
         const transcription = await transcribeAudio(audioBlob);
         console.log("Transcribed Text:", transcription);
-        // Emit the transcribed text back to the client if needed
-        socket.emit("transcriptionResult", transcription);
+
+        // Step 2: Send the transcribed text to OpenAI for a response
+        const response = await getOpenAIResponse(transcription);
+        console.log("OpenAI Response:", response);
+
+        socket.emit("interviewResponse", response);
       } catch (error) {
-        console.error("Error transcribing audio:", error);
-        socket.emit("transcriptionError", "Failed to transcribe audio.");
+        console.error("Error:", error);
+        socket.emit(
+          "transcriptionError",
+          "An error occurred during processing."
+        );
       }
     });
 
@@ -45,7 +53,7 @@ const transcribeAudio = async (audioBlob: Buffer) => {
     filename: "audio.wav",
     contentType: "audio/wav",
   });
-  formData.append("model", "whisper-1"); // Use the correct model for transcription
+  formData.append("model", "whisper-1");
 
   const response = await axios.post(
     "https://api.openai.com/v1/audio/transcriptions",
@@ -58,7 +66,25 @@ const transcribeAudio = async (audioBlob: Buffer) => {
     }
   );
 
-  return response.data.text; // Extract the transcribed text from the response
+  return response.data.text;
+};
+
+const getOpenAIResponse = async (question: string) => {
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: question }],
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data.choices[0].message.content;
 };
 
 export default setupSocketIO;

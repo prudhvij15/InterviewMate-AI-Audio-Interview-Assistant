@@ -11,7 +11,6 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// Use CORS
 const corsOptions = {
   origin: "http://localhost:3000",
   methods: ["GET", "POST"],
@@ -25,7 +24,6 @@ connectDB();
 
 app.use("/api/auth", authRoutes);
 
-// Route to test server
 app.get("/", (req: Request, res: Response) => {
   res.send("Server and MongoDB are running!");
 });
